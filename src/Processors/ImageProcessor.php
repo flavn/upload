@@ -1,21 +1,10 @@
 <?php
 
-/*
- * This file is part of flagrow/upload.
- *
- * Copyright (c) Flagrow.
- *
- * http://flagrow.github.io
- *
- * For the full copyright and license information, please view the license.md
- * file that was distributed with this source code.
- */
+namespace FoF\Upload\Processors;
 
-namespace Flagrow\Upload\Processors;
-
-use Flagrow\Upload\Contracts\Processable;
-use Flagrow\Upload\File;
-use Flagrow\Upload\Helpers\Settings;
+use FoF\Upload\Contracts\Processable;
+use FoF\Upload\File;
+use FoF\Upload\Helpers\Settings;
 use Intervention\Image\Image;
 use Intervention\Image\ImageManager;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -27,7 +16,6 @@ class ImageProcessor implements Processable
      */
     protected $settings;
 
-
     /**
      * @param Settings $settings
      */
@@ -37,13 +25,12 @@ class ImageProcessor implements Processable
     }
 
     /**
-     * @param File $file
+     * @param File         $file
      * @param UploadedFile $upload
-     * @return File
      */
-    public function process(File &$file, UploadedFile &$upload)
+    public function process(File $file, UploadedFile $upload)
     {
-        $mimeType = $upload->getMimeType();
+        $mimeType = $upload->getClientMimeType();
         if ($mimeType == 'image/jpeg' || $mimeType == 'image/png') {
             $image = (new ImageManager())->make($upload->getRealPath());
 
@@ -54,10 +41,12 @@ class ImageProcessor implements Processable
             if ($this->settings->get('addsWatermarks')) {
                 $this->watermark($image);
             }
+            
+            $image->orientate();
 
             @file_put_contents(
                 $upload->getRealPath(),
-                $image->encode($upload->getMimeType())
+                $image->encode($upload->getClientMimeType())
             );
         }
     }

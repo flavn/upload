@@ -1,16 +1,17 @@
 <?php
 
-namespace Flagrow\Upload\Repositories;
+namespace FoF\Upload\Repositories;
 
 use Carbon\Carbon;
-use Flagrow\Upload\Commands\Download as DownloadCommand;
-use Flagrow\Upload\Contracts\UploadAdapter;
-use Flagrow\Upload\Download;
-use Flagrow\Upload\Exceptions\InvalidUploadException;
-use Flagrow\Upload\File;
-use Flagrow\Upload\Validators\UploadValidator;
-use Flarum\Core\User;
+use FoF\Upload\Commands\Download as DownloadCommand;
+use FoF\Upload\Contracts\UploadAdapter;
+use FoF\Upload\Download;
+use FoF\Upload\Exceptions\InvalidUploadException;
+use FoF\Upload\File;
+use FoF\Upload\Validators\UploadValidator;
 use Flarum\Foundation\Application;
+use Flarum\User\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use League\Flysystem\Adapter\Local;
 use League\Flysystem\Filesystem;
@@ -25,11 +26,11 @@ class FileRepository
      */
     protected $path;
     /**
-     * @var FileValidator
+     * @var UploadValidator
      */
     private $validator;
 
-    function __construct(Application $app, UploadValidator $validator)
+    public function __construct(Application $app, UploadValidator $validator)
     {
         $this->path = $app->storagePath();
         $this->validator = $validator;
@@ -37,7 +38,8 @@ class FileRepository
 
     /**
      * @param $uuid
-     * @return File
+     *
+     * @return File|Model
      */
     public function findByUuid($uuid)
     {
@@ -50,36 +52,41 @@ class FileRepository
     /**
      * @param Upload $file
      * @param User $actor
+     *
      * @return File
+     * @throws \Exception
      */
     public function createFileFromUpload(Upload $file, User $actor)
     {
         // Generate a guaranteed unique Uuid.
-        while($uuid = Uuid::uuid4()->toString()) {
-            if (! $this->findByUuid($uuid)) {
+        while ($uuid = Uuid::uuid4()->toString()) {
+            if (!$this->findByUuid($uuid)) {
                 break;
             }
         }
 
-        return (new File)->forceFill([
-            'uuid' => $uuid,
+        return (new File())->forceFill([
+            'uuid'      => $uuid,
             'base_name' => $this->getBasename($file, $uuid),
-            'size' => $file->getSize(),
-            'type' => $file->getMimeType(),
-            'actor_id' => $actor->id,
+            'size'      => $file->getSize(),
+            'type'      => $file->getClientMimeType(),
+            'actor_id'  => $actor->id,
         ]);
     }
 
     /**
      * @param UploadedFileInterface $upload
+     *
      * @return Upload
+     * @throws InvalidUploadException
+     * @throws \Illuminate\Validation\ValidationException
      */
     public function moveUploadedFileToTemp(UploadedFileInterface $upload)
     {
         $this->handleUploadError($upload->getError());
 
         // Move the file to a temporary location first.
-        $tempFile = tempnam($this->path . '/tmp', 'flagrow.upload.');
+        $tempFile = tempnam($this->path.'/tmp', 'fof.upload.');
         $upload->moveTo($tempFile);
 
         $file = new Upload(
@@ -96,6 +103,10 @@ class FileRepository
         return $file;
     }
 
+    /**
+     * @param $code
+     * @throws InvalidUploadException
+     */
     protected function handleUploadError($code)
     {
         switch ($code) {
@@ -129,7 +140,9 @@ class FileRepository
      * Deletes a file from the temporary file location.
      *
      * @param Upload $file
+     *
      * @return bool
+     * @throws \League\Flysystem\FileNotFoundException
      */
     public function removeFromTemp(Upload $file)
     {
@@ -140,6 +153,7 @@ class FileRepository
      * Retrieves a filesystem manager for the temporary file location.
      *
      * @param string $path
+     *
      * @return Filesystem
      */
     protected function getTempFilesystem($path)
@@ -150,6 +164,7 @@ class FileRepository
     /**
      * @param Upload $upload
      * @param string $uuid
+     *
      * @return string
      */
     protected function getBasename(Upload $upload, $uuid)
@@ -158,7 +173,7 @@ class FileRepository
 
         $slug = trim(Str::slug($name));
 
-        return sprintf("%s.%s",
+        return sprintf('%s.%s',
             empty($slug) ? $uuid : $slug,
             $upload->guessExtension() ?: $upload->getClientOriginalExtension()
         );
@@ -167,7 +182,9 @@ class FileRepository
     /**
      * @param Upload $upload
      * @param UploadAdapter $adapter
+     *
      * @return bool|false|resource|string
+     * @throws \League\Flysystem\FileNotFoundException
      */
     public function readUpload(Upload $upload, UploadAdapter $adapter)
     {
@@ -179,8 +196,9 @@ class FileRepository
     }
 
     /**
-     * @param File $file
+     * @param File            $file
      * @param DownloadCommand $command
+     *
      * @return Download
      */
     public function downloadedEntry(File $file, DownloadCommand $command)
@@ -188,10 +206,10 @@ class FileRepository
         $download = new Download();
 
         $download->forceFill([
-            'file_id' => $file->id,
+            'file_id'       => $file->id,
             'discussion_id' => $command->discussionId,
-            'post_id' => $command->postId,
-            'downloaded_at' => new Carbon
+            'post_id'       => $command->postId,
+            'downloaded_at' => new Carbon(),
         ]);
 
         if ($command->actor && !$command->actor->isGuest()) {

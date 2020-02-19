@@ -1,8 +1,8 @@
 <?php
 
-namespace Flagrow\Upload\Events\File;
+namespace FoF\Upload\Events\File;
 
-use Flagrow\Upload\File;
+use FoF\Upload\File;
 
 class WasLoaded
 {
@@ -11,7 +11,7 @@ class WasLoaded
      */
     public $file;
 
-    function __construct(File $file)
+    public function __construct(File $file)
     {
         $this->file = $file;
     }

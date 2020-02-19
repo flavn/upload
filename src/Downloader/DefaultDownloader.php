@@ -1,11 +1,11 @@
 <?php
 
-namespace Flagrow\Upload\Downloader;
+namespace FoF\Upload\Downloader;
 
-use Flagrow\Upload\Commands\Download;
-use Flagrow\Upload\Contracts\Downloader;
-use Flagrow\Upload\Exceptions\InvalidDownloadException;
-use Flagrow\Upload\File;
+use FoF\Upload\Commands\Download;
+use FoF\Upload\Contracts\Downloader;
+use FoF\Upload\Exceptions\InvalidDownloadException;
+use FoF\Upload\File;
 use GuzzleHttp\Client;
 use Psr\Http\Message\ResponseInterface;
 
@@ -25,6 +25,7 @@ class DefaultDownloader implements Downloader
      * Whether the upload adapter works on a specific mime type.
      *
      * @param File $file
+     *
      * @return bool
      */
     public function forFile(File $file)
@@ -33,10 +34,12 @@ class DefaultDownloader implements Downloader
     }
 
     /**
-     * @param File $file
+     * @param File     $file
      * @param Download $command
-     * @return ResponseInterface
+     *
      * @throws InvalidDownloadException
+     *
+     * @return ResponseInterface
      */
     public function download(File $file, Download $command)
     {
@@ -47,18 +50,16 @@ class DefaultDownloader implements Downloader
         }
 
         if ($response->getStatusCode() == 200) {
-
             $response = $this->mutateHeaders($response, $file);
 
             return $response;
         }
-
-        return null;
     }
 
     /**
      * @param ResponseInterface $response
-     * @param File $file
+     * @param File              $file
+     *
      * @return ResponseInterface
      */
     protected function mutateHeaders(ResponseInterface $response, File $file)

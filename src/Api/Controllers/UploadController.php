@@ -1,29 +1,18 @@
 <?php
 
-/*
- * This file is part of flagrow/upload.
- *
- * Copyright (c) Flagrow.
- *
- * http://flagrow.github.io
- *
- * For the full copyright and license information, please view the license.md
- * file that was distributed with this source code.
- */
+namespace FoF\Upload\Api\Controllers;
 
-
-namespace Flagrow\Upload\Api\Controllers;
-
-use Flagrow\Upload\Commands\Upload;
-use Flagrow\Upload\Exceptions\InvalidUploadException;
-use Flarum\Http\Controller\ControllerInterface;
+use FoF\Upload\Commands\Upload;
+use FoF\Upload\Exceptions\InvalidUploadException;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 use Zend\Diactoros\Response\JsonResponse;
 
-class UploadController implements ControllerInterface
+class UploadController implements RequestHandlerInterface
 {
     /**
      * @var Dispatcher
@@ -36,11 +25,13 @@ class UploadController implements ControllerInterface
     }
 
     /**
-     * @param ServerRequestInterface $request
-     * @return \Psr\Http\Message\ResponseInterface
+     * @param \Psr\Http\Message\ServerRequestInterface $request
+     *
      * @throws InvalidUploadException
+     *
+     * @return \Psr\Http\Message\ResponseInterface
      */
-    public function handle(ServerRequestInterface $request)
+    public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor = $request->getAttribute('actor');
         $files = collect(Arr::get($request->getUploadedFiles(), 'files', []));

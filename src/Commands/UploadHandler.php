@@ -1,28 +1,16 @@
 <?php
 
-/*
- * This file is part of flagrow/upload.
- *
- * Copyright (c) Flagrow.
- *
- * http://flagrow.github.io
- *
- * For the full copyright and license information, please view the license.md
- * file that was distributed with this source code.
- */
-
-
-namespace Flagrow\Upload\Commands;
+namespace FoF\Upload\Commands;
 
 use Exception;
-use Flagrow\Upload\Contracts\UploadAdapter;
-use Flagrow\Upload\Events;
-use Flagrow\Upload\File;
-use Flagrow\Upload\Helpers\Settings;
-use Flagrow\Upload\Repositories\FileRepository;
-use Flarum\Core\Access\AssertPermissionTrait;
-use Flarum\Core\Exception\ValidationException;
+use FoF\Upload\Contracts\UploadAdapter;
+use FoF\Upload\Events;
+use FoF\Upload\File;
+use FoF\Upload\Helpers\Settings;
+use FoF\Upload\Repositories\FileRepository;
 use Flarum\Foundation\Application;
+use Flarum\Foundation\ValidationException;
+use Flarum\User\AssertPermissionTrait;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Support\Arr;
 use Psr\Http\Message\UploadedFileInterface;
@@ -55,7 +43,8 @@ class UploadHandler
         Dispatcher $events,
         Settings $settings,
         FileRepository $files
-    ) {
+    )
+    {
         $this->app = $app;
         $this->settings = $settings;
         $this->events = $events;
@@ -64,21 +53,22 @@ class UploadHandler
 
     /**
      * @param Upload $command
+     *
      * @return \Illuminate\Support\Collection
+     * @throws \Flarum\User\Exception\PermissionDeniedException
      */
     public function handle(Upload $command)
     {
         $this->assertCan(
             $command->actor,
-            'flagrow.upload'
+            'fof-upload.upload'
         );
 
         $savedFiles = $command->files->map(function (UploadedFileInterface $file) use ($command) {
-
             try {
                 $upload = $this->files->moveUploadedFileToTemp($file);
 
-                $mimeConfiguration = $this->getMimeConfiguration($upload->getMimeType());
+                $mimeConfiguration = $this->getMimeConfiguration($upload->getClientMimeType());
                 $adapter = $this->getAdapter(Arr::get($mimeConfiguration, 'adapter'));
                 $template = $this->getTemplate(Arr::get($mimeConfiguration, 'template', 'file'));
 
@@ -90,8 +80,8 @@ class UploadHandler
                     throw new ValidationException(['upload' => 'Uploading files of this type is not allowed.']);
                 }
 
-                if (!$adapter->forMime($upload->getMimeType())) {
-                    throw new ValidationException(['upload' => "Upload adapter does not support the provided mime type: {$upload->getMimeType()}."]);
+                if (!$adapter->forMime($upload->getClientMimeType())) {
+                    throw new ValidationException(['upload' => "Upload adapter does not support the provided mime type: {$upload->getClientMimeType()}."]);
                 }
 
                 $file = $this->files->createFileFromUpload($upload, $command->actor);
@@ -116,6 +106,7 @@ class UploadHandler
 
                 $file->upload_method = $adapter;
                 $file->tag = $template;
+                $file->actor_id = $command->actor->id;
 
                 $this->events->fire(
                     new Events\File\WillBeSaved($command->actor, $file, $upload)
@@ -128,9 +119,7 @@ class UploadHandler
                 $this->events->fire(
                     new Events\File\WasSaved($command->actor, $file, $upload)
                 );
-
             } catch (Exception $e) {
-
                 if (isset($upload)) {
                     $this->files->removeFromTemp($upload);
                 }
@@ -146,19 +135,21 @@ class UploadHandler
 
     /**
      * @param $adapter
+     *
      * @return UploadAdapter|null
      */
     protected function getAdapter($adapter)
     {
         if (!$adapter) {
-            return null;
+            return;
         }
 
-        return app("flagrow.upload-adapter.$adapter");
+        return app("fof.upload-adapter.$adapter");
     }
 
     /**
      * @param $template
+     *
      * @return \Flagrow\Upload\Templates\AbstractTemplate|null
      */
     protected function getTemplate($template)
@@ -168,11 +159,12 @@ class UploadHandler
 
     /**
      * @param $mime
+     *
      * @return mixed
      */
     protected function getMimeConfiguration($mime)
     {
-        return $this->settings->getMimeTypesConfiguration()->first(function ($regex) use ($mime) {
+        return $this->settings->getMimeTypesConfiguration()->first(function ($_, $regex) use ($mime) {
             return preg_match("/$regex/", $mime);
         });
     }

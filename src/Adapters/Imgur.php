@@ -1,21 +1,9 @@
 <?php
 
-/*
- * This file is part of flagrow/upload.
- *
- * Copyright (c) Flagrow.
- *
- * http://flagrow.github.io
- *
- * For the full copyright and license information, please view the license.md
- * file that was distributed with this source code.
- */
+namespace FoF\Upload\Adapters;
 
-namespace Flagrow\Upload\Adapters;
-
-use Flagrow\Upload\Contracts\Filesystem;
-use Flagrow\Upload\Contracts\UploadAdapter;
-use Flagrow\Upload\File;
+use FoF\Upload\Contracts\UploadAdapter;
+use FoF\Upload\File;
 use GuzzleHttp\Client as Guzzle;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -37,6 +25,7 @@ class Imgur implements UploadAdapter
      * Whether the upload adapter works on a specific mime type.
      *
      * @param string $mime
+     *
      * @return bool
      */
     public function forMime($mime)
@@ -58,6 +47,7 @@ class Imgur implements UploadAdapter
      * @param File $file
      * @param UploadedFile $upload
      * @param string $contents
+     *
      * @return File|bool
      */
     public function upload(File $file, UploadedFile $upload, $contents)
@@ -65,8 +55,8 @@ class Imgur implements UploadAdapter
         $response = $this->api->post('upload', [
             'json' => [
                 'type' => 'base64',
-                'image' => base64_encode($contents)
-            ]
+                'image' => base64_encode($contents),
+            ],
         ]);
 
         // successful upload, let's get the generated URL
@@ -90,6 +80,7 @@ class Imgur implements UploadAdapter
      * In case deletion is not possible, return false.
      *
      * @param File $file
+     *
      * @return File|bool
      */
     public function delete(File $file)

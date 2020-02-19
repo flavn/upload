@@ -1,18 +1,20 @@
 <?php
 
-namespace Flagrow\Upload\Api\Controllers;
+namespace FoF\Upload\Api\Controllers;
 
-use Flagrow\Upload\Api\Serializers\FileSerializer;
-use Flagrow\Upload\Commands\Download;
-use Flagrow\Upload\Helpers\Settings;
-use Flarum\Core\Repository\PostRepository;
-use Flarum\Http\Controller\ControllerInterface;
+use FoF\Upload\Api\Serializers\FileSerializer;
+use FoF\Upload\Commands\Download;
+use FoF\Upload\Helpers\Settings;
+use Flarum\Post\PostRepository;
 use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Contracts\Session\Session;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Arr;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
 
-class DownloadController implements ControllerInterface
+class DownloadController implements RequestHandlerInterface
 {
     public $serializer = FileSerializer::class;
 
@@ -37,10 +39,11 @@ class DownloadController implements ControllerInterface
     }
 
     /**
-     * @param ServerRequestInterface $request
+     * @param \Psr\Http\Message\ServerRequestInterface $request
+     *
      * @return \Psr\Http\Message\ResponseInterface
      */
-    public function handle(ServerRequestInterface $request)
+    public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $actor = $request->getAttribute('actor');
         $uuid = Arr::get($request->getQueryParams(), 'uuid');
@@ -50,9 +53,10 @@ class DownloadController implements ControllerInterface
         $post = $this->posts->findOrFail($postId, $actor);
         $discussion = $post->discussion_id;
 
+        /** @var Session $session */
         $session = $request->getAttribute('session');
 
-        if ($this->settings->get('disableHotlinkProtection') != 1 && $csrf !== $session->get('csrf_token')) {
+        if ($this->settings->get('disableHotlinkProtection') != 1 && $csrf !== $session->token()) {
             throw new ModelNotFoundException();
         }
 
@@ -61,4 +65,3 @@ class DownloadController implements ControllerInterface
         );
     }
 }
-

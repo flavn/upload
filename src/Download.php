@@ -1,12 +1,12 @@
 <?php
 
-namespace Flagrow\Upload;
+namespace FoF\Upload;
 
 use Carbon\Carbon;
-use Flarum\Core\Discussion;
-use Flarum\Core\Post;
-use Flarum\Core\User;
 use Flarum\Database\AbstractModel;
+use Flarum\Discussion\Discussion;
+use Flarum\Post\Post;
+use Flarum\User\User;
 
 /**
  * @property int $id
@@ -22,7 +22,7 @@ use Flarum\Database\AbstractModel;
  */
 class Download extends AbstractModel
 {
-    protected $table = 'flagrow_file_downloads';
+    protected $table = 'fof_upload_downloads';
 
     public $timestamps = false;
 
